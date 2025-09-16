@@ -64,3 +64,23 @@ jobs:
           push: ${{ github.repository_owner == 'Netcracker' }}
           tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ steps.tag.outputs.tag }}
           provenance: false
+      - name: Analyze for critical and high CVEs
+        if: ${{ steps.tag.outputs.tag != '' }}
+        id: docker-scout-cves
+        uses: docker/scout-action@v1
+        continue-on-error: true
+        with:
+          command: cves,recommendations
+          image: ${{ steps.tag.outputs.tag }}
+          sarif-file: sarif.output.json
+          summary: true
+          ignore-base: false
+          dockerhub-user: ${{ secrets.DOCKERHUB_USER }}
+          dockerhub-password: ${{ secrets.DOCKERHUB_RW_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SARIF result
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: sarif.output.json
